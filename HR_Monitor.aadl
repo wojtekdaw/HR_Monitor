@@ -70,8 +70,7 @@ public
       power_supply: out data port Base_Types::Boolean;
     properties
       SEI::NetWeight => 0.025 kg;
-      -- Usunieto 'W' dla bezpieczenstwa parsowania
-      SEI::PowerCapacity => 2.5; 
+      SEI::PowerCapacity => 2.5;
   end Battery;
 
   device Enclosure_PCB
@@ -85,7 +84,7 @@ public
 
   processor STM32U3
     features
-      spi_bus: provides bus access SPI_Bus;
+      spi_bus: requires bus access SPI_Bus;
     properties
       SEI::NetWeight => 0.001 kg;
       SEI::MIPSCapacity => 160.0 MIPS;
@@ -189,8 +188,6 @@ public
       spi_access: requires bus access SPI_Bus;
       ble_out: out data port HeartRate_Val;
       sd_out: out data port ECG_Sample;
-    -- flows
-      -- flow_latency_analysis: flow path drdy_irq -> ble_out;
   end ECG_Firmware;
 
   process implementation ECG_Firmware.impl
@@ -206,9 +203,6 @@ public
       c4: port th_proc.hr_val_out -> th_comm.hr_data_in;
       c5: port th_comm.ble_data_out -> ble_out;
       c6: port th_proc.ecg_data_to_sd -> sd_out;
-    -- flows
-      -- Zakomentowano flows aby naprawic bledy parsowania:
-      -- flow_latency_analysis: flow path drdy_irq -> th_acq.f_acq -> th_proc.f_proc_to_ble -> th_comm.f_comm -> ble_out;
   end ECG_Firmware.impl;
 
   -- =========================================================
@@ -226,14 +220,14 @@ public
       ram: memory SRAM;
       flash: memory Flash_Memory;
       bus_spi: bus SPI_Bus;
-      
+
       ads_sensor: device ADS1194_Sensor;
       sd_card: device MicroSD_Card;
       ble_mod: device BLE_Module;
-      
+
       battery: device Battery;
       casing: device Enclosure_PCB;
-      
+
       firmware: process ECG_Firmware.impl;
 
     connections
@@ -249,16 +243,12 @@ public
       ble_conn: port firmware.ble_out -> ble_mod.hr_data_in;
       sd_conn: port firmware.sd_out -> sd_card.data_in;
 
-    -- flows
-      -- End_To_End_Latency: flow path ads_sensor.f1 -> irq_conn -> firmware.flow_latency_analysis -> ble_conn -> ble_mod.f_ble_out;
-
     properties
       Actual_Processor_Binding => (reference(cpu)) applies to firmware;
       Actual_Memory_Binding => (reference(ram)) applies to firmware;
-      
+
       Actual_Connection_Binding => (reference(bus_spi)) applies to irq_conn;
       Actual_Connection_Binding => (reference(bus_spi)) applies to ble_conn;
-
   end HR_Monitor_System.impl;
 
 end HR_Monitor;
