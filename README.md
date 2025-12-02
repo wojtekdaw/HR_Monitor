@@ -12,7 +12,7 @@
 # 3. Opis modelowanego systemu
 
 ### A. Opis ogólny
-Projekt przedstawia model architektury systemu wbudowanego typu *wearable* (urządzenie noszone) przeznaczonego do ciągłego monitorowania sygnału EKG. System bazuje na energooszczędnym mikrokontrolerze **STM32U3** (rdzeń Cortex-M33) oraz systemie operacyjnym czasu rzeczywistego **Azure RTOS (ThreadX)**. Warstwa sprzętowa obejmuje precyzyjny front-end analogowy ADS1194, moduł komunikacji Bluetooth Low Energy (BlueNRG-M0A) oraz pamięć masową microSD. Model AADL uwzględnia aspekty fizyczne (waga, pobór mocy) oraz czasowe (opóźnienia, harmonogramowanie) niezbędne do walidacji projektu przed etapem prototypowania.
+Projekt przedstawia model architektury systemu wbudowanego typu *wearable* (urządzenie noszone) przeznaczonego do ciągłego monitorowania sygnału EKG. System bazuje na energooszczędnym mikrokontrolerze **STM32U3** (rdzeń Cortex-M33) oraz systemie operacyjnym czasu rzeczywistego **Azure RTOS (ThreadX)**. Warstwa sprzętowa obejmuje precyzyjny front-end analogowy ADS1194, moduł komunikacji Bluetooth Low Energy (BlueNRG-M0A) oraz pamięć masową microSD. Model AADL uwzględnia aspekty fizyczne (waga, pobór mocy) niezbędne do walidacji projektu przed etapem prototypowania.
 
 ### B. Opis dla użytkownika
 Urządzenie jest osobistym monitorem pracy serca. Użytkownik zakłada urządzenie (elektrody) na klatkę piersiową. System automatycznie:
