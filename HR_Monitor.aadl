@@ -231,12 +231,13 @@ public
       firmware: process ECG_Firmware.impl;
 
     connections
-      -- Magistrale (Bus Access)
-      bus_cpu: bus access bus_spi <-> cpu.spi_bus;
-      bus_ads: bus access bus_spi <-> ads_sensor.spi_bus_access;
-      bus_sd:  bus access bus_spi <-> sd_card.spi_bus_access;
-      bus_ble: bus access bus_spi <-> ble_mod.spi_bus_access;
-      bus_sw:  bus access bus_spi <-> firmware.spi_access;
+      -- Magistrale (Bus Access) – wzór jak w przykładach:
+      -- eth1: bus access Prod_cpu.eth -> Mag_bus;
+      bus_cpu: bus access cpu.spi_bus -> bus_spi;
+      bus_ads: bus access ads_sensor.spi_bus_access -> bus_spi;
+      bus_sd:  bus access sd_card.spi_bus_access -> bus_spi;
+      bus_ble: bus access ble_mod.spi_bus_access -> bus_spi;
+      bus_sw:  bus access firmware.spi_access -> bus_spi;
 
       -- Dane (Ports)
       irq_conn: port ads_sensor.drdy_interrupt -> firmware.drdy_irq;
@@ -245,7 +246,7 @@ public
 
     properties
       Actual_Processor_Binding => (reference(cpu)) applies to firmware;
-      Actual_Memory_Binding => (reference(ram)) applies to firmware;
+      Actual_Memory_Binding   => (reference(ram)) applies to firmware;
 
       Actual_Connection_Binding => (reference(bus_spi)) applies to irq_conn;
       Actual_Connection_Binding => (reference(bus_spi)) applies to ble_conn;
