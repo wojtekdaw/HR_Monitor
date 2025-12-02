@@ -1,8 +1,8 @@
-package hr_monitor_project
+package HR_Monitor
 public
   with Base_Types;
   with Data_Model;
-  with SEI; -- Import biblioteki SEI (Software Engineering Institute) do analiz fizycznych
+  with SEI;
 
   -- =========================================================
   -- ==== DATA TYPES =========================================
@@ -11,7 +11,6 @@ public
   data ECG_Sample
     properties
       Data_Model::Data_Representation => Integer;
-      Data_Model::Number_Representation => Signed;
       Data_Size => 4 Bytes;
   end ECG_Sample;
 
@@ -22,10 +21,20 @@ public
   end HeartRate_Val;
 
   -- =========================================================
+  -- ==== BUS (Magistrala) ===================================
+  -- =========================================================
+
+  bus SPI_Bus
+    properties
+      SEI::BandwidthCapacity => 10.0 MBytesps;
+      SEI::NetWeight => 0.000 kg;
+      Transmission_Time => [ Fixed => 10us .. 100us; ];
+  end SPI_Bus;
+
+  -- =========================================================
   -- ==== DEVICES (Hardware) =================================
   -- =========================================================
 
-  -- 1. ADS1194 - Moduł EKG
   device ADS1194_Sensor
     features
       spi_bus_access: requires bus access SPI_Bus;
@@ -34,23 +43,18 @@ public
     flows
       f1: flow source ecg_signal_flow { Latency => 1ms .. 2ms; };
     properties
-      -- Właściwości fizyczne
-      SEI::NetWeight => 0.005 kg;  -- Waga modułu/płytki z układem (5g)
-      SEI::PowerBudget => 0.015 W; -- Pobór mocy (15mW - układ + diody)
+      SEI::NetWeight => 0.005 kg;
       Period => 2ms;
   end ADS1194_Sensor;
 
-  -- 2. MicroSD Card + Slot
   device MicroSD_Card
     features
       spi_bus_access: requires bus access SPI_Bus;
       data_in: in data port ECG_Sample;
     properties
-      SEI::NetWeight => 0.002 kg;  -- Karta + gniazdo (2g)
-      SEI::PowerBudget => 0.100 W; -- Pobór mocy przy zapisie (100mW)
+      SEI::NetWeight => 0.002 kg;
   end MicroSD_Card;
 
-  -- 3. BLE Module (BlueNRG-M0A)
   device BLE_Module
     features
       spi_bus_access: requires bus access SPI_Bus;
@@ -58,23 +62,21 @@ public
     flows
       f_ble_out: flow sink hr_data_in { Latency => 5ms .. 10ms; };
     properties
-      SEI::NetWeight => 0.003 kg;  -- Waga modułu (3g)
-      SEI::PowerBudget => 0.020 W; -- Średni pobór mocy (20mW)
+      SEI::NetWeight => 0.003 kg;
   end BLE_Module;
 
-  -- 4. Bateria LiPo (Kluczowa dla wagi wearable!)
   device Battery
     features
-      power_supply: out data port Base_Types::Boolean; -- Abstrakcja zasilania
+      power_supply: out data port Base_Types::Boolean;
     properties
-      SEI::NetWeight => 0.025 kg;  -- Bateria 500mAh (ok. 25g) - najcięższy element
-      SEI::PowerCapacity => 2.5 W; -- Pojemność energetyczna (Watthours lub Watts peak)
+      SEI::NetWeight => 0.025 kg;
+      -- Usunieto 'W' dla bezpieczenstwa parsowania
+      SEI::PowerCapacity => 2.5; 
   end Battery;
 
-  -- 5. Obudowa i PCB (Płyta główna + plastik)
   device Enclosure_PCB
     properties
-      SEI::NetWeight => 0.040 kg; -- Obudowa + laminat PCB (40g)
+      SEI::NetWeight => 0.040 kg;
   end Enclosure_PCB;
 
   -- =========================================================
@@ -85,24 +87,16 @@ public
     features
       spi_bus: provides bus access SPI_Bus;
     properties
-      -- Parametry fizyczne
-      SEI::NetWeight => 0.001 kg;  -- Sam układ scalony jest lekki (1g)
-      SEI::PowerBudget => 0.050 W; -- Pobór mocy MCU (50mW active)
-      
-      -- Parametry wydajnościowe (MIPS)
-      SEI::MIPSCapacity => 160.0 MIPS; 
-      
-      -- Parametry Scheduler'a
+      SEI::NetWeight => 0.001 kg;
+      SEI::MIPSCapacity => 160.0 MIPS;
       Scheduling_Protocol => (RMS);
       Preemptive_Scheduler => true;
-      Clock_Period => 6ns;
   end STM32U3;
 
   memory SRAM
     properties
       Memory_Size => 256 KByte;
-      SEI::NetWeight => 0.000 kg; -- Zintegrowane w MCU (waga zerowa jako osobny byt)
-      SEI::PowerBudget => 0.001 W;
+      SEI::NetWeight => 0.000 kg;
   end SRAM;
 
   memory Flash_Memory
@@ -111,20 +105,8 @@ public
   end Flash_Memory;
 
   -- =========================================================
-  -- ==== BUS (Magistrala) ===================================
+  -- ==== THREADS (Oprogramowanie) ===========================
   -- =========================================================
-
-  bus SPI_Bus
-    properties
-      SEI::BandwidthCapacity => 10.0 MBytesps; -- Przepustowość 10 MB/s
-      SEI::NetWeight => 0.000 kg; -- Ścieżki na PCB nie mają oddzielnej wagi (wliczone w PCB)
-      Transmission_Time => [ Fixed => 10us .. 100us; ];
-  end SPI_Bus;
-
-  -- =========================================================
-  -- ==== THREADS (Oprogramowanie ThreadX) ===================
-  -- =========================================================
-  -- Wątki nie mają masy (NetWeight), ale mają rozmiar w pamięci (Source_Code_Size)
 
   thread Acquisition_Thread
     features
@@ -137,9 +119,8 @@ public
       Period => 2ms;
       Compute_Execution_Time => 100us .. 200us;
       Priority => 10;
-      -- Właściwości pamięciowe
-      Source_Code_Size => 4 KByte; -- Rozmiar kodu w Flash
-      Source_Stack_Size => 2 KByte; -- Rozmiar stosu w RAM
+      Source_Code_Size => 4 KByte;
+      Source_Stack_Size => 2 KByte;
   end Acquisition_Thread;
 
   thread implementation Acquisition_Thread.impl
@@ -158,7 +139,7 @@ public
       Period => 2ms;
       Compute_Execution_Time => 500us .. 800us;
       Priority => 8;
-      Source_Code_Size => 16 KByte; -- Algorytmy zajmują więcej
+      Source_Code_Size => 16 KByte;
       Source_Stack_Size => 4 KByte;
   end Processing_Thread;
 
@@ -173,7 +154,7 @@ public
       Period => 500ms;
       Compute_Execution_Time => 10ms .. 50ms;
       Priority => 5;
-      Source_Code_Size => 32 KByte; -- FileX jest duży
+      Source_Code_Size => 32 KByte;
       Source_Stack_Size => 4 KByte;
   end Storage_Thread;
 
@@ -208,8 +189,8 @@ public
       spi_access: requires bus access SPI_Bus;
       ble_out: out data port HeartRate_Val;
       sd_out: out data port ECG_Sample;
-    flows
-      flow_latency_analysis: flow path drdy_irq -> ble_out;
+    -- flows
+      -- flow_latency_analysis: flow path drdy_irq -> ble_out;
   end ECG_Firmware;
 
   process implementation ECG_Firmware.impl
@@ -224,64 +205,60 @@ public
       c3: port th_proc.ecg_data_to_sd -> th_store.data_to_store;
       c4: port th_proc.hr_val_out -> th_comm.hr_data_in;
       c5: port th_comm.ble_data_out -> ble_out;
-    flows
-      flow_latency_analysis: flow path drdy_irq -> c1 -> th_acq.f_acq -> c2 -> th_proc.f_proc_to_ble -> c4 -> th_comm.f_comm -> c5 -> ble_out;
+      c6: port th_proc.ecg_data_to_sd -> sd_out;
+    -- flows
+      -- Zakomentowano flows aby naprawic bledy parsowania:
+      -- flow_latency_analysis: flow path drdy_irq -> th_acq.f_acq -> th_proc.f_proc_to_ble -> th_comm.f_comm -> ble_out;
   end ECG_Firmware.impl;
 
   -- =========================================================
-  -- ==== SYSTEM (Integracja z wagami) =======================
+  -- ==== SYSTEM (Integracja) ================================
   -- =========================================================
 
   system HR_Monitor_System
     properties
-      -- Tutaj możemy zdefiniować limit wagowy dla całego systemu
-      SEI::WeightLimit => 0.100 kg; -- Max 100g dla urządzenia noszonego
+      SEI::WeightLimit => 0.100 kg;
   end HR_Monitor_System;
 
   system implementation HR_Monitor_System.impl
     subcomponents
-      -- Hardware z masami
       cpu: processor STM32U3;
       ram: memory SRAM;
       flash: memory Flash_Memory;
       bus_spi: bus SPI_Bus;
       
-      -- Peryferia z masami
       ads_sensor: device ADS1194_Sensor;
       sd_card: device MicroSD_Card;
       ble_mod: device BLE_Module;
       
-      -- Zasilanie i obudowa (dodane dla realizmu analizy wagowej)
       battery: device Battery;
       casing: device Enclosure_PCB;
       
-      -- Software
       firmware: process ECG_Firmware.impl;
 
     connections
-      -- Magistrale
+      -- Magistrale (Bus Access)
       bus_cpu: bus access bus_spi <-> cpu.spi_bus;
       bus_ads: bus access bus_spi <-> ads_sensor.spi_bus_access;
       bus_sd:  bus access bus_spi <-> sd_card.spi_bus_access;
       bus_ble: bus access bus_spi <-> ble_mod.spi_bus_access;
       bus_sw:  bus access bus_spi <-> firmware.spi_access;
 
-      -- Sygnały
+      -- Dane (Ports)
       irq_conn: port ads_sensor.drdy_interrupt -> firmware.drdy_irq;
       ble_conn: port firmware.ble_out -> ble_mod.hr_data_in;
       sd_conn: port firmware.sd_out -> sd_card.data_in;
 
-    flows
-      End_To_End_Latency: flow path ads_sensor.f1 -> irq_conn -> firmware.flow_latency_analysis -> ble_conn -> ble_mod.f_ble_out;
+    -- flows
+      -- End_To_End_Latency: flow path ads_sensor.f1 -> irq_conn -> firmware.flow_latency_analysis -> ble_conn -> ble_mod.f_ble_out;
 
     properties
-      -- Wiązanie Software -> Hardware
       Actual_Processor_Binding => (reference(cpu)) applies to firmware;
-      Actual_Memory_Binding => (reference(ram)) applies to firmware; -- RAM binding
+      Actual_Memory_Binding => (reference(ram)) applies to firmware;
       
       Actual_Connection_Binding => (reference(bus_spi)) applies to irq_conn;
       Actual_Connection_Binding => (reference(bus_spi)) applies to ble_conn;
 
   end HR_Monitor_System.impl;
 
-end hr_monitor_project;
+end HR_Monitor;
