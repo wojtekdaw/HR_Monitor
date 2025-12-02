@@ -1,12 +1,21 @@
+------------------------------------------------------------
 package HR_Monitor
 public
   with Base_Types;
   with Data_Model;
 
-  -----------------------------------------------------------
-  -- 1. Typy danych
-  -----------------------------------------------------------
+  ------------------------------------------------------------
+  -- Property set: Weight + Energy
+  ------------------------------------------------------------
+  property set HW_Metrics is
+    Weight : aadlreal applies to (processor, memory, device, system, process);
+    Energy_Consumption : aadlreal applies to (processor, memory, device, system, process);
+  end HW_Metrics;
 
+
+  ------------------------------------------------------------
+  -- DATA TYPES
+  ------------------------------------------------------------
   data ECG_Sample
     properties
       Data_Model::Data_Representation => Integer;
@@ -17,100 +26,111 @@ public
       Data_Model::Data_Representation => Integer;
   end HeartRate_Val;
 
-  -----------------------------------------------------------
-  -- 2. Urządzenia (sprzęt)
-  -----------------------------------------------------------
 
-  -- Czujnik ECG (ADS1194) – upraszczamy do portów
+  ------------------------------------------------------------
+  -- DEVICES (hardware)
+  ------------------------------------------------------------
+
   device ADS1194_Sensor
     features
-      drdy_interrupt : out event port;          -- sygnał DRDY
-      ecg_signal     : out data port ECG_Sample; -- próbki ECG
+      drdy_interrupt : out event port;
+      ecg_signal     : out data port ECG_Sample;
+    properties
+      HW_Metrics::Weight => 0.005;              -- 5 g
+      HW_Metrics::Energy_Consumption => 0.04;   -- 40 mW
   end ADS1194_Sensor;
 
-  -- Karta microSD
   device MicroSD_Card
     features
       data_in : in data port ECG_Sample;
+    properties
+      HW_Metrics::Weight => 0.002;       -- 2 g
+      HW_Metrics::Energy_Consumption => 0.12;
   end MicroSD_Card;
 
-  -- Moduł BLE
   device BLE_Module
     features
       hr_data_in : in data port HeartRate_Val;
+    properties
+      HW_Metrics::Weight => 0.003;
+      HW_Metrics::Energy_Consumption => 0.035;
   end BLE_Module;
 
-  -- Bateria (tylko informacyjnie)
   device Battery
+    properties
+      HW_Metrics::Weight => 0.025;
+      HW_Metrics::Energy_Consumption => 0.0;
   end Battery;
 
-  -- Obudowa / PCB (tylko informacyjnie)
   device Enclosure_PCB
+    properties
+      HW_Metrics::Weight => 0.040;
+      HW_Metrics::Energy_Consumption => 0.0;
   end Enclosure_PCB;
 
-  -----------------------------------------------------------
-  -- 3. Procesor i pamięć
-  -----------------------------------------------------------
 
+  ------------------------------------------------------------
+  -- PROCESSOR + MEMORY
+  ------------------------------------------------------------
   processor STM32U3
+    properties
+      HW_Metrics::Weight => 0.001;
+      HW_Metrics::Energy_Consumption => 0.080;
   end STM32U3;
 
   memory SRAM
+    properties
+      HW_Metrics::Weight => 0.001;
+      HW_Metrics::Energy_Consumption => 0.0;
   end SRAM;
 
   memory Flash_Memory
+    properties
+      HW_Metrics::Weight => 0.001;
+      HW_Metrics::Energy_Consumption => 0.0;
   end Flash_Memory;
 
-  -----------------------------------------------------------
-  -- 4. Wątki – logika aplikacji
-  -----------------------------------------------------------
 
-  -- Akwizycja danych z ADS1194 po DRDY
+  ------------------------------------------------------------
+  -- THREADS (software)
+  ------------------------------------------------------------
+
   thread Acquisition_Thread
     features
-      drdy_event    : in event port;
-      ecg_data_out  : out data port ECG_Sample;
+      drdy_event   : in event port;
+      ecg_data_out : out data port ECG_Sample;
     properties
       Dispatch_Protocol => Sporadic;
-      Period => 2 ms;
       Compute_Execution_Time => 0 ms .. 1 ms;
-      Priority => 10;
   end Acquisition_Thread;
 
   thread implementation Acquisition_Thread.impl
   end Acquisition_Thread.impl;
 
-  -- Przetwarzanie sygnału ECG: filtracja + HR
   thread Processing_Thread
     features
-      ecg_data_in   : in data port ECG_Sample;
-      ecg_data_to_sd: out data port ECG_Sample;
-      hr_val_out    : out data port HeartRate_Val;
+      ecg_data_in : in data port ECG_Sample;
+      ecg_data_to_sd : out data port ECG_Sample;
+      hr_val_out : out data port HeartRate_Val;
     properties
       Dispatch_Protocol => Periodic;
       Period => 2 ms;
-      Compute_Execution_Time => 0 ms .. 2 ms;
-      Priority => 8;
   end Processing_Thread;
 
   thread implementation Processing_Thread.impl
   end Processing_Thread.impl;
 
-  -- Zapis danych na microSD
   thread Storage_Thread
     features
       data_to_store : in data port ECG_Sample;
     properties
       Dispatch_Protocol => Periodic;
       Period => 500 ms;
-      Compute_Execution_Time => 0 ms .. 10 ms;
-      Priority => 5;
   end Storage_Thread;
 
   thread implementation Storage_Thread.impl
   end Storage_Thread.impl;
 
-  -- Komunikacja zewnętrzna (BLE)
   thread Communication_Thread
     features
       hr_data_in   : in data port HeartRate_Val;
@@ -118,22 +138,24 @@ public
     properties
       Dispatch_Protocol => Periodic;
       Period => 1000 ms;
-      Compute_Execution_Time => 0 ms .. 5 ms;
-      Priority => 6;
   end Communication_Thread;
 
   thread implementation Communication_Thread.impl
   end Communication_Thread.impl;
 
-  -----------------------------------------------------------
-  -- 5. Proces – firmware na STM32
-  -----------------------------------------------------------
+
+  ------------------------------------------------------------
+  -- PROCESS (firmware)
+  ------------------------------------------------------------
 
   process ECG_Firmware
     features
-      drdy_irq : in event port;          -- przerwanie DRDY z ADS1194
-      ble_out  : out data port HeartRate_Val; -- dane do BLE
-      sd_out   : out data port ECG_Sample;    -- dane do SD
+      drdy_irq : in event port;
+      ble_out  : out data port HeartRate_Val;
+      sd_out   : out data port ECG_Sample;
+    properties
+      HW_Metrics::Weight => 0.0;
+      HW_Metrics::Energy_Consumption => 0.01;
   end ECG_Firmware;
 
   process implementation ECG_Firmware.impl
@@ -143,7 +165,6 @@ public
       th_store : thread Storage_Thread.impl;
       th_comm  : thread Communication_Thread.impl;
     connections
-      -- połączenia między portami procesu a wątkami
       c1 : port drdy_irq -> th_acq.drdy_event;
       c2 : port th_acq.ecg_data_out -> th_proc.ecg_data_in;
       c3 : port th_proc.ecg_data_to_sd -> th_store.data_to_store;
@@ -152,18 +173,22 @@ public
       c6 : port th_proc.ecg_data_to_sd -> sd_out;
   end ECG_Firmware.impl;
 
-  -----------------------------------------------------------
-  -- 6. System – integracja sprzętu i firmware
-  -----------------------------------------------------------
+
+  ------------------------------------------------------------
+  -- SYSTEM
+  ------------------------------------------------------------
 
   system HR_Monitor_System
+    properties
+      HW_Metrics::Weight => 0.0;                 -- OSATE policzy sumę
+      HW_Metrics::Energy_Consumption => 0.0;     -- OSATE policzy sumę
   end HR_Monitor_System;
 
   system implementation HR_Monitor_System.impl
     subcomponents
-      cpu      : processor STM32U3;
-      ram      : memory SRAM;
-      flash    : memory Flash_Memory;
+      cpu       : processor STM32U3;
+      ram       : memory SRAM;
+      flash     : memory Flash_Memory;
 
       ads_sensor : device ADS1194_Sensor;
       sd_card    : device MicroSD_Card;
@@ -175,10 +200,7 @@ public
       firmware : process ECG_Firmware.impl;
 
     connections
-      -- sprzęt → firmware
       irq_conn : port ads_sensor.drdy_interrupt -> firmware.drdy_irq;
-
-      -- firmware → urządzenia zewnętrzne
       ble_conn : port firmware.ble_out -> ble_mod.hr_data_in;
       sd_conn  : port firmware.sd_out  -> sd_card.data_in;
 
