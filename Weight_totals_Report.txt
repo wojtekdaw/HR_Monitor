@@ -1,0 +1,9 @@
+Weight totals Report
+
+spi_bus: [A] Sum of weights (0.002 kg) is below weight limit of 0.005 kg (60.0 % Weight slack)
+ADS1194_Sensor: [A] Sum of weights (0.005 kg) is below weight limit of 0.005 kg (100.0 % Weight slack)
+MicroSD_Card: [A] Sum of weights (0.002 kg) is below weight limit of 0.005 kg (60.0 % Weight slack)
+BLE_Module: [A] Sum of weights (0.003 kg) is below weight limit of 0.009 kg (33.3 % Weight slack)
+Battery: [A] Sum of weights (0.025 kg) is below weight limit of 0.040 kg (37.5 % Weight slack)
+Enclosure_PCB: [A] Sum of weights (0.040 kg) is below weight limit of 0.080 kg (50.0 % Weight slack)
+HR_Monitor_System_impl_Instance: [A] Sum of weights (0.077 kg) is below weight limit of 0.100 kg (77.0 % Weight slack)
