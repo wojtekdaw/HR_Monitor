@@ -52,9 +52,7 @@ Model wykorzystuje standardowe komponenty AADL wzbogacone o właściwości `prop
 
 # 5. Model - rysunek
 
-*(miejsce na zdjęcie)*
-
-![Diagram Systemu AADL](ścieżka_do_obrazka/diagram_modelu.png)
+![Diagram Systemu AADL](HR_Monitor_System.png)
 
 ---
 
